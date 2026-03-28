@@ -51,4 +51,4 @@ USER nestjs
 EXPOSE 4000
 
 # Run migrations then start
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js 2>&1"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js || echo 'CRASH: exit code' $?"]
