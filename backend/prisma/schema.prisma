@@ -1,0 +1,250 @@
+// ============================================================
+// QRestaurant - Prisma Schema
+// Production-grade PostgreSQL schema with full relations
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  STAFF
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  SERVED
+  COMPLETED
+  CANCELLED
+}
+
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  MAINTENANCE
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  REFUNDED
+}
+
+// ─── ADMIN USER ───────────────────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  password     String
+  name         String
+  role         Role      @default(STAFF)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  refreshToken String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("users")
+}
+
+// ─── RESTAURANT ───────────────────────────────────────────
+
+model Restaurant {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  logoUrl     String?
+  address     String?
+  phone       String?
+  email       String?
+  currency    String   @default("USD")
+  timezone    String   @default("UTC")
+  isOpen      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("restaurants")
+}
+
+// ─── TABLE ────────────────────────────────────────────────
+
+model Table {
+  id          String      @id @default(cuid())
+  number      Int         @unique
+  label       String
+  capacity    Int         @default(4)
+  status      TableStatus @default(AVAILABLE)
+  qrCode      String?     @unique // base64 QR image
+  qrToken     String      @unique @default(cuid()) // token embedded in QR URL
+  floor       String?     @default("Main")
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  orders      Order[]
+  sessions    TableSession[]
+
+  @@map("tables")
+}
+
+// ─── TABLE SESSION ────────────────────────────────────────
+
+model TableSession {
+  id          String    @id @default(cuid())
+  tableId     String
+  sessionToken String   @unique @default(cuid())
+  customerCount Int?
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  isActive    Boolean   @default(true)
+
+  table       Table     @relation(fields: [tableId], references: [id])
+  orders      Order[]
+
+  @@map("table_sessions")
+}
+
+// ─── MENU CATEGORY ────────────────────────────────────────
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  nameAr      String?    // Arabic translation
+  nameFr      String?    // French translation
+  description String?
+  imageUrl    String?
+  sortOrder   Int        @default(0)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  items       MenuItem[]
+
+  @@map("categories")
+}
+
+// ─── MENU ITEM ────────────────────────────────────────────
+
+model MenuItem {
+  id              String     @id @default(cuid())
+  categoryId      String
+  name            String
+  nameAr          String?
+  nameFr          String?
+  description     String?
+  descriptionAr   String?
+  descriptionFr   String?
+  price           Decimal    @db.Decimal(10, 2)
+  discountPrice   Decimal?   @db.Decimal(10, 2)
+  imageUrl        String?
+  calories        Int?
+  preparationTime Int?       // minutes
+  tags            String[]   @default([]) // vegetarian, vegan, spicy, etc.
+  allergens       String[]   @default([])
+  isAvailable     Boolean    @default(true)
+  isFeatured      Boolean    @default(false)
+  sortOrder       Int        @default(0)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  category        Category   @relation(fields: [categoryId], references: [id])
+  orderItems      OrderItem[]
+
+  @@map("menu_items")
+}
+
+// ─── ORDER ────────────────────────────────────────────────
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  tableId         String
+  sessionId       String?
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(UNPAID)
+  subtotal        Decimal       @db.Decimal(10, 2)
+  tax             Decimal       @db.Decimal(10, 2) @default(0)
+  discount        Decimal       @db.Decimal(10, 2) @default(0)
+  total           Decimal       @db.Decimal(10, 2)
+  customerNote    String?
+  staffNote       String?
+  estimatedTime   Int?          // minutes
+  confirmedAt     DateTime?
+  preparingAt     DateTime?
+  readyAt         DateTime?
+  servedAt        DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  table           Table         @relation(fields: [tableId], references: [id])
+  session         TableSession? @relation(fields: [sessionId], references: [id])
+  items           OrderItem[]
+  statusHistory   OrderStatusHistory[]
+
+  @@map("orders")
+}
+
+// ─── ORDER ITEM ───────────────────────────────────────────
+
+model OrderItem {
+  id          String    @id @default(cuid())
+  orderId     String
+  menuItemId  String
+  name        String    // snapshot at time of order
+  price       Decimal   @db.Decimal(10, 2) // snapshot
+  quantity    Int
+  subtotal    Decimal   @db.Decimal(10, 2)
+  note        String?
+  createdAt   DateTime  @default(now())
+
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem    MenuItem  @relation(fields: [menuItemId], references: [id])
+
+  @@map("order_items")
+}
+
+// ─── ORDER STATUS HISTORY ─────────────────────────────────
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  status    OrderStatus
+  note      String?
+  changedBy String?     // user id or "system"
+  createdAt DateTime    @default(now())
+
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_status_history")
+}
+
+// ─── NOTIFICATION ─────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // order_placed, order_ready, etc.
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}

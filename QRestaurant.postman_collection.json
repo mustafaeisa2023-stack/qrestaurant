@@ -1,0 +1,238 @@
+{
+  "info": {
+    "name": "QRestaurant API",
+    "description": "Complete API test collection for QRestaurant ordering system",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:4000/api" },
+    { "key": "access_token", "value": "" },
+    { "key": "table_id", "value": "" },
+    { "key": "qr_token", "value": "" },
+    { "key": "order_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const res = pm.response.json();",
+            "pm.collectionVariables.set('access_token', res.data.accessToken);",
+            "pm.test('Login successful', () => pm.response.to.have.status(200));",
+            "pm.test('Has access token', () => pm.expect(res.data.accessToken).to.be.a('string'));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"admin@lamaison.com\", \"password\": \"Admin@123\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/auth/profile",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tables",
+      "item": [
+        {
+          "name": "Get All Tables",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/tables",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] }
+          }
+        },
+        {
+          "name": "Create Table",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const res = pm.response.json();",
+            "pm.collectionVariables.set('table_id', res.data.id);",
+            "pm.collectionVariables.set('qr_token', res.data.qrToken);",
+            "pm.test('Table created', () => pm.response.to.have.status(201));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/v1/tables",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"number\": 99, \"label\": \"Test Table\", \"capacity\": 4, \"floor\": \"Test Floor\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Get Table by QR Token (Public)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/tables/by-token/{{qr_token}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Menu",
+      "item": [
+        {
+          "name": "Get Full Menu (Public)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/menu/public"
+          }
+        },
+        {
+          "name": "Get Featured Items (Public)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/menu/featured"
+          }
+        },
+        {
+          "name": "Get All Categories (Admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/menu/categories?activeOnly=false",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] }
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/v1/menu/categories",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Test Category\", \"nameAr\": \"تصنيف تجريبي\", \"sortOrder\": 99}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Toggle Item Availability",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/v1/menu/items/REPLACE_WITH_ITEM_ID/toggle-availability",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Place Order (Public)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "const res = pm.response.json();",
+            "pm.collectionVariables.set('order_id', res.data.id);",
+            "pm.test('Order created', () => pm.response.to.have.status(201));",
+            "pm.test('Order number assigned', () => pm.expect(res.data.orderNumber).to.match(/^ORD-/));"
+          ]}}],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/v1/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"tableId\": \"{{table_id}}\", \"items\": [{\"menuItemId\": \"REPLACE_WITH_ITEM_ID\", \"quantity\": 2, \"note\": \"No onions\"}], \"customerNote\": \"Extra napkins please\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Get Active Orders (Admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/orders/active",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] }
+          }
+        },
+        {
+          "name": "Update Order Status → CONFIRMED",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/v1/orders/{{order_id}}/status",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\": \"CONFIRMED\", \"estimatedTime\": 20, \"staffNote\": \"Table confirmed\"}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Track Order by Number (Public)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/orders/track/ORD-REPLACE-WITH-ORDER-NUMBER"
+          }
+        },
+        {
+          "name": "Get All Orders with Filters",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/v1/orders?status=PENDING&page=1&limit=10",
+              "query": [
+                { "key": "status", "value": "PENDING" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/analytics/dashboard",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] }
+          }
+        },
+        {
+          "name": "Revenue (7 days)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/analytics/revenue?days=7",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] }
+          }
+        },
+        {
+          "name": "Top Items",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/analytics/top-items?limit=10",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] }
+          }
+        },
+        {
+          "name": "Table Analytics",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/v1/analytics/tables",
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{access_token}}" }] }
+          }
+        }
+      ]
+    }
+  ]
+}

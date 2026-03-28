@@ -1,0 +1,13 @@
+node_modules
+dist
+.env
+.env.local
+logs
+uploads/menu
+uploads/categories
+uploads/temp
+coverage
+*.log
+.git
+.gitignore
+README.md

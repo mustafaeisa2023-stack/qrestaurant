@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.production
+backend/.env
+backend/.env.local
+frontend/.env.local
+
+# Build output
+dist/
+.next/
+out/
+build/
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+logs/*.log
+!logs/.gitkeep
+
+# Uploads (user content kept in .gitkeep)
+backend/uploads/menu/*
+backend/uploads/categories/*
+backend/uploads/temp/*
+!backend/uploads/menu/.gitkeep
+!backend/uploads/categories/.gitkeep
+!backend/uploads/temp/.gitkeep
+!backend/uploads/.gitkeep
+
+# Testing
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# SSL certs
+nginx/ssl/
+
+# Misc
+.admin-token
+*.bak
